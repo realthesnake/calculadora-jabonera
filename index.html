@@ -1,0 +1,1186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora Jabonera</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --crema: #FAF6EE;
+  --salvia: #7B9E87;
+  --salvia-claro: #A8C4B0;
+  --salvia-oscuro: #4A7258;
+  --miel: #C8853E;
+  --texto: #2D2416;
+  --texto-suave: #7A6A55;
+  --blanco: #FFFFFF;
+  --error: #B03020;
+  --exito: #2A7A48;
+  --borde: #D8CCBB;
+  --fondo-tarjeta: #FFFFFF;
+  --fondo-seccion: #F5F0E8;
+  --fila: #F8F4EE;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--crema);
+  color: var(--texto);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+header {
+  background: var(--salvia-oscuro);
+  color: var(--blanco);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+header h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.7rem, 5vw, 2.8rem);
+  letter-spacing: -0.5px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+}
+.lienzo-burbujas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.burbuja {
+  position: absolute;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255,255,255,0.22);
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.04) 60%, transparent 100%);
+  animation: subir linear infinite;
+}
+.burbuja::after {
+  content: '';
+  position: absolute;
+  top: 18%; left: 22%;
+  width: 28%; height: 14%;
+  background: rgba(255,255,255,0.35);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+}
+@keyframes subir {
+  0%   { transform: translateY(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 0.7; }
+  100% { transform: translateY(-180px) scale(0.85); opacity: 0; }
+}
+
+.app { max-width: 920px; margin: 0 auto; padding: 28px 16px 80px; }
+
+.pestanas { display: flex; gap: 4px; overflow-x: auto; margin-bottom: 0; }
+.boton-pestana {
+  padding: 10px 22px;
+  border: 1.5px solid var(--borde);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: var(--fondo-seccion);
+  color: var(--texto-suave);
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.boton-pestana.activa { background: var(--blanco); color: var(--salvia-oscuro); border-color: var(--salvia-claro); }
+.panel-pestana {
+  display: none;
+  background: var(--blanco);
+  border: 1.5px solid var(--salvia-claro);
+  border-radius: 0 12px 12px 12px;
+  padding: 24px 20px;
+  margin-bottom: 20px;
+}
+.panel-pestana.activa { display: block; }
+
+.tarjeta { background: var(--fondo-tarjeta); border: 1px solid var(--borde); border-radius: 14px; padding: 22px 20px; margin-bottom: 16px; }
+.titulo-tarjeta {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.05rem;
+  color: var(--salvia-oscuro);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--borde);
+}
+
+.dos-columnas { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.tres-columnas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 580px) { .dos-columnas, .tres-columnas { grid-template-columns: 1fr; } }
+
+.campo { margin-bottom: 14px; }
+.etiqueta {
+  display: block;
+  font-size: .76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--texto-suave);
+  margin-bottom: 5px;
+}
+input[type="text"], input[type="number"], select, textarea {
+  width: 100%;
+  padding: 9px 13px;
+  border: 1.5px solid var(--borde);
+  border-radius: 9px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .92rem;
+  background: var(--crema);
+  color: var(--texto);
+  outline: none;
+  transition: border-color .15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--salvia); }
+.ayuda { font-size: .76rem; color: var(--texto-suave); margin-top: 4px; font-style: italic; }
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  font-size: .88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s, transform .1s;
+}
+.boton:active { transform: scale(.98); }
+.boton-primario { background: var(--salvia-oscuro); color: var(--blanco); }
+.boton-primario:hover { opacity: .88; }
+.boton-secundario { background: transparent; color: var(--salvia-oscuro); border: 1.5px solid var(--salvia-claro); }
+.boton-secundario:hover { background: var(--fondo-seccion); }
+.boton-pequeno { padding: 5px 12px; font-size: .8rem; }
+.fila-botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+.alerta { border-radius: 9px; padding: 10px 14px; font-size: .84rem; margin-bottom: 14px; border-left: 3px solid; }
+.alerta-info { background: #eef5f1; color: #1e5c38; border-color: var(--salvia); }
+.alerta-advertencia { background: #fdf5ec; color: #7a4a10; border-color: var(--miel); }
+
+.barra-molde { background: var(--fondo-seccion); border: 1px solid var(--borde); border-radius: 14px; padding: 18px 20px; margin-top: 16px; }
+.limites-barra { display: flex; justify-content: space-between; font-size: .75rem; color: var(--texto-suave); margin-bottom: 6px; }
+.pista-barra { height: 28px; background: #e4ddd4; border-radius: 9px; overflow: hidden; border: 1px solid var(--borde); }
+.relleno-barra {
+  height: 100%; border-radius: 9px; background: var(--salvia);
+  transition: width .45s ease; position: relative;
+}
+.relleno-barra.advertencia { background: var(--miel); }
+.relleno-barra.excedido { background: var(--error); }
+.relleno-barra::after {
+  content: ''; position: absolute;
+  top: 5px; left: 8px; right: 8px; height: 5px;
+  background: rgba(255,255,255,.3); border-radius: 3px;
+}
+.mensaje-barra { margin-top: 8px; font-size: .83rem; font-weight: 600; color: var(--texto-suave); }
+.mensaje-barra.ok { color: var(--exito); }
+.mensaje-barra.advertencia { color: var(--miel); }
+.mensaje-barra.excedido { color: var(--error); }
+
+.fila-estadisticas { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.estadistica { background: var(--fondo-tarjeta); border: 1px solid var(--borde); border-radius: 11px; padding: 12px 10px; text-align: center; }
+.valor-estadistica { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--salvia-oscuro); line-height: 1.1; }
+.etiqueta-estadistica { font-size: .72rem; text-transform: uppercase; letter-spacing: .4px; color: var(--texto-suave); margin-top: 3px; font-weight: 600; }
+
+.tabla { width: 100%; border-collapse: collapse; font-size: .83rem; }
+.tabla th { background: var(--salvia-oscuro); color: var(--blanco); padding: 9px 11px; text-align: left; font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .3px; }
+.tabla th:first-child { border-radius: 8px 0 0 0; }
+.tabla th:last-child { border-radius: 0 8px 0 0; }
+.tabla td { padding: 8px 11px; border-bottom: 1px solid var(--borde); vertical-align: middle; }
+.tabla tr:nth-child(even) td { background: var(--fila); }
+.tabla tr:hover td { background: #eef4f1; }
+
+.fila-ingrediente {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr 90px 70px 32px;
+  gap: 8px; align-items: center;
+  background: var(--fila); border-radius: 9px;
+  padding: 9px 10px; margin-bottom: 7px;
+  border: 1px solid transparent;
+}
+.fila-ingrediente:hover { border-color: var(--salvia-claro); }
+.fila-ingrediente input, .fila-ingrediente select { background: var(--blanco); }
+.porcentaje-ingrediente { text-align: center; font-weight: 700; font-size: .88rem; }
+.pct-ok { color: var(--exito); }
+.pct-advertencia { color: var(--miel); }
+.pct-excedido { color: var(--error); }
+.encabezado-ingredientes {
+  display: grid;
+  grid-template-columns: 1.8fr 1.2fr 90px 70px 32px;
+  gap: 8px; padding: 0 10px 6px;
+  font-size: .72rem; text-transform: uppercase;
+  letter-spacing: .4px; color: var(--texto-suave); font-weight: 600;
+}
+
+.fila-costo {
+  display: grid; grid-template-columns: 1.6fr 100px 120px 100px 32px;
+  gap: 8px; align-items: center;
+  background: var(--fila); border-radius: 9px; padding: 8px 10px; margin-bottom: 7px;
+}
+.fila-costo input { background: var(--blanco); }
+.fila-empaque {
+  display: grid; grid-template-columns: 1fr 140px 32px;
+  gap: 8px; align-items: center;
+  background: var(--fila); border-radius: 9px; padding: 8px 10px; margin-bottom: 7px;
+}
+.fila-empaque input { background: var(--blanco); }
+
+.barra-precios {
+  background: linear-gradient(135deg, var(--salvia-oscuro) 0%, var(--salvia) 100%);
+  color: var(--blanco); border-radius: 12px; padding: 18px 20px;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 12px; margin-top: 18px;
+}
+.item-precio { text-align: center; }
+.valor-precio { font-family: 'Playfair Display', serif; font-size: 1.35rem; font-weight: 700; }
+.etiqueta-precio { font-size: .7rem; opacity: .8; text-transform: uppercase; letter-spacing: .4px; margin-top: 2px; }
+
+.lista-recetas { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip-receta {
+  display: inline-flex; align-items: center; gap: 8px;
+  border: 1.5px solid var(--borde); border-radius: 9px;
+  padding: 7px 14px; font-size: .85rem; cursor: pointer;
+  background: var(--blanco); transition: border-color .15s, background .15s;
+}
+.chip-receta:hover { border-color: var(--salvia); background: var(--fondo-seccion); }
+.nombre-receta { font-weight: 600; }
+.fecha-receta { font-size: .72rem; color: var(--texto-suave); }
+.borrar-chip { font-size: .72rem; color: var(--texto-suave); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.borrar-chip:hover { color: var(--error); background: #fdf0ee; }
+.acciones-chip { display: flex; gap: 4px; align-items: center; }
+.acciones-chip button {
+  background: none; border: none; cursor: pointer;
+  font-size: .7rem; color: var(--texto-suave);
+  padding: 2px 6px; border-radius: 4px; transition: background .15s, color .15s;
+}
+.acciones-chip button:hover { background: var(--fondo-seccion); color: var(--salvia-oscuro); }
+
+.vista-previa { background: var(--fondo-seccion); border: 1px solid var(--borde); border-radius: 12px; padding: 18px 20px; margin-top: 16px; }
+
+.fondo-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 900; overflow-y: auto; }
+.fondo-modal.abierto { display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; }
+.ventana-modal {
+  background: var(--blanco); border-radius: 14px; padding: 24px;
+  width: 100%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+}
+.ventana-modal h3 { font-family: 'Playfair Display', serif; color: var(--salvia-oscuro); margin-bottom: 16px; font-size: 1.1rem; }
+.pie-modal { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+
+.item-biblioteca {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 8px; border-bottom: 1px solid var(--borde);
+  cursor: pointer; border-radius: 7px; transition: background .12s;
+}
+.item-biblioteca:hover { background: var(--fondo-seccion); }
+.nombre-item { font-weight: 600; font-size: .88rem; }
+.sub-item { font-size: .75rem; color: var(--texto-suave); }
+.pildora-pct {
+  display: inline-block; background: var(--salvia-claro); color: var(--blanco);
+  border-radius: 6px; padding: 2px 9px; font-size: .73rem; font-weight: 700;
+  white-space: nowrap; flex-shrink: 0;
+}
+.pct-readonly {
+  width: 100%; padding: 9px 13px;
+  border: 1.5px solid var(--borde); border-radius: 9px;
+  font-family: 'DM Sans', sans-serif; font-size: .92rem;
+  background: var(--fondo-seccion); color: var(--salvia-oscuro);
+  font-weight: 600; cursor: default;
+}
+.nota-auto { font-size: .74rem; color: var(--salvia-oscuro); margin-top: 4px; font-style: italic; }
+
+.vacio { text-align: center; color: var(--texto-suave); font-size: .88rem; padding: 20px; font-style: italic; }
+.boton-eliminar {
+  background: none; border: none; cursor: pointer;
+  color: var(--texto-suave); font-size: 1rem; line-height: 1;
+  padding: 3px 5px; border-radius: 5px; transition: color .15s, background .15s;
+}
+.boton-eliminar:hover { color: var(--error); background: #fdf0ee; }
+
+footer { text-align: center; padding: 20px; font-size: .78rem; color: var(--texto-suave); border-top: 1px solid var(--borde); margin-top: 10px; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--fondo-seccion); }
+::-webkit-scrollbar-thumb { background: var(--salvia-claro); border-radius: 8px; }
+
+@media (max-width: 520px) {
+  .fila-ingrediente, .encabezado-ingredientes { grid-template-columns: 1fr 80px 60px 32px; }
+  .fila-ingrediente .tipo-ingrediente { display: none; }
+  .fila-costo { grid-template-columns: 1fr 90px 100px 32px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="lienzo-burbujas" id="lienzo-burbujas"></div>
+  <h1>Calculadora Jabonera</h1>
+</header>
+
+<div class="app">
+  <div class="pestanas">
+    <button class="boton-pestana activa" onclick="cambiarPestana('formulacion',this)">Formulacion</button>
+    <button class="boton-pestana" onclick="cambiarPestana('costos',this)">Costos y precio</button>
+    <button class="boton-pestana" onclick="cambiarPestana('referencia',this)">Referencia</button>
+    <button class="boton-pestana" onclick="cambiarPestana('recetas',this)">Mis recetas</button>
+  </div>
+
+  <div class="panel-pestana activa" id="panel-formulacion">
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Base de jabon</div>
+      <div class="dos-columnas">
+        <div class="campo">
+          <label class="etiqueta">Nombre del jabon</label>
+          <input type="text" id="nombre-jabon" placeholder="Ej: Jabon de lavanda y karite">
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Tipo de base de glicerina</label>
+          <input type="text" id="tipo-base" placeholder="Escribe el tipo de base (ej: Glicerina blanca)">
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Peso de la base (g)</label>
+          <input type="number" id="peso-base" value="" min="1" max="20000" placeholder="Ej: 500" oninput="recalcular()">
+          <div class="ayuda">Peso antes de fundir. Se pierde entre 5% y 10% en el proceso.</div>
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Porcentaje total de aditivos</label>
+          <select id="porcentaje-total" onchange="recalcular()">
+            <option value="2">2%</option>
+            <option value="3">3%</option>
+            <option value="4">4%</option>
+            <option value="5" selected>5%</option>
+            <option value="6">6%</option>
+            <option value="7">7%</option>
+            <option value="8">8%</option>
+          </select>
+          <div class="ayuda">Maximo recomendado: 8%. Trabajar siempre por debajo del 10%.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fila-estadisticas">
+      <div class="estadistica"><div class="valor-estadistica" id="est-base">—</div><div class="etiqueta-estadistica">Base (g)</div></div>
+      <div class="estadistica"><div class="valor-estadistica" id="est-max-total">—</div><div class="etiqueta-estadistica">Max total aditivos</div></div>
+      <div class="estadistica"><div class="valor-estadistica" id="est-max-ing">—</div><div class="etiqueta-estadistica">Max por aditivo (3%)</div></div>
+      <div class="estadistica"><div class="valor-estadistica" id="est-usados">0 g</div><div class="etiqueta-estadistica">Aditivos usados</div></div>
+      <div class="estadistica"><div class="valor-estadistica" id="est-disponible">—</div><div class="etiqueta-estadistica">Disponible</div></div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Aditivos</div>
+      <div class="alerta alerta-info">
+        <strong>Regla de 3 g por cada 100 g:</strong> Cada aditivo individual no debe superar el 3% del peso de la base. La suma de todos los aditivos no debe superar el porcentaje total seleccionado (maximo <span id="porcentaje-maximo">5</span>%).
+      </div>
+      <div class="encabezado-ingredientes">
+        <span>Aditivo / ingrediente</span>
+        <span class="tipo-ingrediente">Tipo</span>
+        <span>Cantidad (g)</span>
+        <span>% base</span>
+        <span></span>
+      </div>
+      <div id="lista-ingredientes"></div>
+      <div class="fila-botones">
+        <button class="boton boton-secundario" onclick="abrirBiblioteca()">Agregar aditivo</button>
+      </div>
+      <div class="barra-molde">
+        <div class="limites-barra">
+          <span id="etiqueta-usado">0 g</span>
+          <span id="etiqueta-maximo">Maximo: — g</span>
+        </div>
+        <div class="pista-barra">
+          <div class="relleno-barra" id="relleno-barra" style="width:0%"></div>
+        </div>
+        <div class="mensaje-barra" id="mensaje-barra">Completa los pasos para empezar a calcular</div>
+      </div>
+    </div>
+
+    <div class="fila-botones">
+      <button class="boton boton-primario" onclick="guardarReceta()">Guardar receta</button>
+      <button class="boton boton-secundario" onclick="limpiarFormulario()">Limpiar formulacion</button>
+      <button class="boton boton-secundario" onclick="window.print()">Imprimir formula</button>
+    </div>
+  </div>
+
+  <div class="panel-pestana" id="panel-costos">
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Datos del lote</div>
+      <div class="tres-columnas">
+        <div class="campo">
+          <label class="etiqueta">Unidades del lote</label>
+          <input type="number" id="c-unidades" value="" placeholder="Ej: 12" min="1" oninput="recalcularCostos()">
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Horas de trabajo</label>
+          <input type="number" id="c-horas" value="" placeholder="Ej: 3" min="0" step="0.5" oninput="recalcularCostos()">
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Valor hora de trabajo ($)</label>
+          <input type="number" id="c-tarifa" value="" placeholder="Ej: 8000" min="0" oninput="recalcularCostos()">
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Utilidad deseada (%)</label>
+          <select id="c-utilidad" onchange="recalcularCostos()">
+            <option value="20">20%</option>
+            <option value="30" selected>30%</option>
+            <option value="40">40%</option>
+            <option value="50">50%</option>
+            <option value="60">60%</option>
+            <option value="80">80%</option>
+            <option value="100">100%</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="etiqueta">Impuesto / IVA (%)</label>
+          <input type="number" id="c-impuesto" value="" placeholder="Ej: 19" min="0" max="50" oninput="recalcularCostos()">
+        </div>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Insumos de compra</div>
+      <div style="overflow-x:auto">
+        <div style="min-width:480px">
+          <div style="display:grid;grid-template-columns:1.6fr 100px 120px 100px 32px;gap:8px;padding:0 10px 8px;font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-suave);font-weight:600">
+            <span>Insumo</span><span>Cantidad compra (g/ml)</span><span>Precio compra ($)</span><span>Cantidad usada (g)</span><span></span>
+          </div>
+          <div id="filas-costos"></div>
+        </div>
+      </div>
+      <div class="fila-botones">
+        <button class="boton boton-secundario" onclick="agregarFilaCosto()">Agregar insumo</button>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Empaque y otros costos</div>
+      <div>
+        <div style="display:grid;grid-template-columns:1fr 140px 32px;gap:8px;padding:0 10px 8px;font-size:.72rem;text-transform:uppercase;letter-spacing:.4px;color:var(--texto-suave);font-weight:600">
+          <span>Item</span><span>Costo por unidad ($)</span><span></span>
+        </div>
+        <div id="filas-empaque"></div>
+      </div>
+      <div class="fila-botones">
+        <button class="boton boton-secundario" onclick="agregarFilaEmpaque()">Agregar item de empaque</button>
+      </div>
+    </div>
+
+    <div class="barra-precios">
+      <div class="item-precio"><div class="valor-precio" id="precio-lote">$—</div><div class="etiqueta-precio">Costo lote</div></div>
+      <div class="item-precio"><div class="valor-precio" id="precio-unidad">$—</div><div class="etiqueta-precio">Costo / unidad</div></div>
+      <div class="item-precio"><div class="valor-precio" id="precio-sugerido">$—</div><div class="etiqueta-precio">Precio sugerido</div></div>
+      <div class="item-precio"><div class="valor-precio" id="precio-final">$—</div><div class="etiqueta-precio">Precio final (con imp.)</div></div>
+      <div class="item-precio"><div class="valor-precio" id="precio-ganancia">$—</div><div class="etiqueta-precio">Ganancia / unidad</div></div>
+    </div>
+  </div>
+
+  <div class="panel-pestana" id="panel-referencia">
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Distribucion recomendada por tipo de aditivo</div>
+      <div style="overflow-x:auto">
+        <table class="tabla">
+          <thead><tr><th>Tipo de aditivo</th><th>Dosis</th><th>Cuando agregar</th><th>Nota</th></tr></thead>
+          <tbody>
+            <tr><td>Grasas solidas (mantecas, ceras)</td><td>1% – 3%</td><td>Primero, con el calor de la base</td><td>Ralladas o en trozos pequenos para fundir facilmente</td></tr>
+            <tr><td>Pigmentos en polvo (micas, oxidos)</td><td>1% – 2%</td><td>Base liquida, diluidos en alcohol</td><td>Naturales o sinteticos, aplicar gota a gota</td></tr>
+            <tr><td>Plantas en polvo</td><td>1% – 3%</td><td>Base liquida directamente</td><td>No necesitan diluirse en alcohol</td></tr>
+            <tr><td>Colorante liquido</td><td>hasta 1%</td><td>Base liquida, gota a gota</td><td>Segun el tono deseado, puede ser menos</td></tr>
+            <tr><td>Aceite vegetal</td><td>1% – 3%</td><td>Base fundida y ligera</td><td>Maximo 1 o 2 aceites/mantecas adicionales</td></tr>
+            <tr><td>Fragancias sinteticas</td><td>1% – 2%</td><td>Al final, por debajo de 40 C</td><td>Segun la intensidad de aroma deseada</td></tr>
+            <tr><td>Aceites esenciales</td><td>hasta 1%</td><td>Al final, por debajo de 35 C</td><td>Son 100% puros y muy concentrados, usar con cuidado</td></tr>
+            <tr><td>Liquidos espesos (miel, extractos)</td><td>1% – 2%</td><td>Una vez fundida la base</td><td>Mezclar suavemente</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:16px">
+      <div class="titulo-tarjeta">Ingredientes naturales, beneficios y porcentajes</div>
+      <div style="overflow-x:auto">
+        <table class="tabla">
+          <thead><tr><th>Ingrediente</th><th>Beneficio</th><th>Tipo de piel</th><th>% de uso</th></tr></thead>
+          <tbody id="cuerpo-tabla-natural"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="tarjeta" style="margin-top:16px">
+      <div class="titulo-tarjeta">Conversiones de medida</div>
+      <div class="dos-columnas">
+        <div class="estadistica"><div class="valor-estadistica">6 g</div><div class="etiqueta-estadistica">1 cucharada sopera (liquidos oleosos)</div></div>
+        <div class="estadistica"><div class="valor-estadistica">3 g</div><div class="etiqueta-estadistica">1 cucharadita de te (liquidos oleosos)</div></div>
+        <div class="estadistica"><div class="valor-estadistica">1 g</div><div class="etiqueta-estadistica">aprox. 20 gotas (colorantes / esenciales)</div></div>
+        <div class="estadistica"><div class="valor-estadistica">0.9 ml</div><div class="etiqueta-estadistica">equivale a 1 g (liquidos)</div></div>
+      </div>
+      <div class="alerta alerta-advertencia" style="margin-top:14px">
+        Gramos y mililitros no son lo mismo. La densidad de cada liquido varia. Usa siempre una gramera de precision para formulas profesionales.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel-pestana" id="panel-recetas">
+    <div class="tarjeta">
+      <div class="titulo-tarjeta">Recetas guardadas</div>
+      <div class="fila-botones" style="margin-top:0;margin-bottom:16px">
+        <button class="boton boton-secundario" onclick="document.getElementById('archivo-importar').click()">Importar receta (JSON)</button>
+        <input type="file" id="archivo-importar" accept=".json" style="display:none" onchange="importarReceta(event)">
+      </div>
+      <div id="contenedor-lista-recetas"></div>
+    </div>
+    <div id="contenedor-vista-previa"></div>
+  </div>
+</div>
+
+<div class="fondo-modal" id="modal-biblioteca" onclick="if(event.target===this)cerrarBiblioteca()">
+  <div class="ventana-modal">
+    <h3>Biblioteca de ingredientes</h3>
+    <div class="campo">
+      <input type="text" id="buscar-biblioteca" placeholder="Buscar por nombre, tipo o piel..." oninput="filtrarBiblioteca()">
+    </div>
+    <div id="lista-biblioteca" style="max-height:340px;overflow-y:auto;border:1px solid var(--borde);border-radius:9px"></div>
+    <div class="pie-modal">
+      <button class="boton boton-secundario" onclick="abrirPersonalizado()">Agregar ingrediente personalizado</button>
+      <button class="boton boton-secundario" onclick="cerrarBiblioteca()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="fondo-modal" id="modal-ingrediente-personalizado" onclick="if(event.target===this)cerrarPersonalizado()">
+  <div class="ventana-modal">
+    <h3>Agregar ingrediente a la biblioteca</h3>
+    <div class="campo">
+      <label class="etiqueta">Nombre del ingrediente</label>
+      <input type="text" id="ip-nombre" placeholder="Ej: Arcilla azul">
+    </div>
+    <div class="dos-columnas">
+      <div class="campo">
+        <label class="etiqueta">Tipo</label>
+        <select id="ip-tipo" onchange="autocompletarPorcentaje()">
+          <option value="Planta en polvo">Planta en polvo</option>
+          <option value="Aceite vegetal">Aceite vegetal</option>
+          <option value="Aceite esencial">Aceite esencial</option>
+          <option value="Grasa solida">Grasa solida</option>
+          <option value="Polvo (arcilla, carbon)">Polvo (arcilla, carbon)</option>
+          <option value="Pigmento/Mica en polvo">Pigmento/Mica en polvo</option>
+          <option value="Exfoliante">Exfoliante</option>
+          <option value="Liquido espeso">Liquido espeso</option>
+          <option value="Fragancia">Fragancia</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label class="etiqueta">% de uso sugerido</label>
+        <div class="pct-readonly" id="ip-porcentaje-display">2%</div>
+        <div class="nota-auto" id="ip-porcentaje-nota"></div>
+      </div>
+    </div>
+    <div class="campo">
+      <label class="etiqueta">Beneficio</label>
+      <input type="text" id="ip-beneficio" placeholder="Ej: Hidratante y calmante">
+    </div>
+    <div class="campo">
+      <label class="etiqueta">Tipo de piel recomendado</label>
+      <input type="text" id="ip-piel" placeholder="Ej: Seca o sensible">
+    </div>
+    <div class="pie-modal">
+      <button class="boton boton-secundario" onclick="cerrarPersonalizado()">Cancelar</button>
+      <button class="boton boton-primario" onclick="guardarPersonalizado()">Agregar a biblioteca</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Basada en la metodologia de formulacion con la regla de 3 g por cada 100 g de base de glicerina
+</footer>
+
+<script>
+const PORCENTAJES_POR_TIPO = {
+  'Planta en polvo':         { pct: 2.0,  nota: 'Punto medio del rango 1%–3%' },
+  'Aceite vegetal':          { pct: 2.0,  nota: 'Punto medio del rango 1%–3%' },
+  'Aceite esencial':         { pct: 0.5,  nota: 'Muy concentrado, usar con cuidado' },
+  'Grasa solida':            { pct: 2.0,  nota: 'Punto medio del rango 1%–3%' },
+  'Polvo (arcilla, carbon)': { pct: 1.5,  nota: 'Medio del rango 1%–2%' },
+  'Pigmento/Mica en polvo':  { pct: 1.0,  nota: 'Conservador para no saturar el color' },
+  'Exfoliante':              { pct: 1.0,  nota: 'Punto medio del rango 0.5%–2%' },
+  'Liquido espeso':          { pct: 1.5,  nota: 'Medio del rango 1%–2%' },
+  'Fragancia':               { pct: 1.5,  nota: 'Medio del rango 1%–2%' },
+};
+
+const INGREDIENTES_PREDEFINIDOS = [
+  {nombre:'Manzanilla',            tipo:'Planta en polvo',         beneficio:'Calmante, antiinflamatoria y suavizante',                       piel:'Sensible, seca o con rosacea',            pct:'2%'},
+  {nombre:'Avena en hojuelas',     tipo:'Planta en polvo',         beneficio:'Exfoliante suave, retiene humedad, alivia picazon',              piel:'Seca, sensible o con dermatitis',         pct:'2%'},
+  {nombre:'Curcuma',               tipo:'Planta en polvo',         beneficio:'Iluminadora, desinflamante, unifica el tono',                    piel:'Grasa, mixta o con manchas',              pct:'0.5%'},
+  {nombre:'Miel',                  tipo:'Liquido espeso',          beneficio:'Humectante, antibacteriana y suavizante',                        piel:'Todo tipo, especialmente seca o madura',  pct:'1.5%'},
+  {nombre:'Alga espirulina',       tipo:'Planta en polvo',         beneficio:'Antioxidante, revitaliza y purifica la piel',                    piel:'Madura, opaca o con tendencia a acne',    pct:'0.8%'},
+  {nombre:'Arcilla blanca (caolin)',tipo:'Polvo (arcilla, carbon)', beneficio:'Limpia sin resecar, purifica y suaviza',                        piel:'Sensible, seca o madura',                 pct:'1.5%'},
+  {nombre:'Calendula',             tipo:'Planta en polvo',         beneficio:'Regeneradora, cicatrizante y calmante',                          piel:'Sensible, con eczema o agrietada',        pct:'1.5%'},
+  {nombre:'Aceite esencial de romero',tipo:'Aceite esencial',      beneficio:'Estimula circulacion, regula grasa, purifica',                   piel:'Grasa o con acne',                        pct:'0.8%'},
+  {nombre:'Rosas en polvo',        tipo:'Planta en polvo',         beneficio:'Revitaliza, suaviza, tonifica y aporta aroma delicado',          piel:'Seca, madura o sensible',                 pct:'1.5%'},
+  {nombre:'Arcilla rosada',        tipo:'Polvo (arcilla, carbon)', beneficio:'Purifica sin resecar, calma irritaciones',                       piel:'Sensible, seca o madura',                 pct:'1.5%'},
+  {nombre:'Cafe',                  tipo:'Exfoliante',              beneficio:'Estimula la circulacion, exfolia, reduce apariencia de celulitis',piel:'Todo tipo (evitar en muy sensibles)',      pct:'1.5%'},
+  {nombre:'Cacao en polvo (sin azucar)',tipo:'Planta en polvo',    beneficio:'Antioxidante, nutre y suaviza, aroma calido',                    piel:'Seca, opaca o madura',                    pct:'1%'},
+  {nombre:'Aceite de rosa mosqueta',tipo:'Aceite vegetal',         beneficio:'Regenerador profundo, cicatrices y lineas de expresion',         piel:'Madura, seca o con manchas',              pct:'1.5%'},
+  {nombre:'Aceite de almendras dulces',tipo:'Aceite vegetal',      beneficio:'Nutre profundamente, alivia resequedad, suaviza',                piel:'Seca, sensible o bebes',                  pct:'2%'},
+  {nombre:'Carbon activado',       tipo:'Polvo (arcilla, carbon)', beneficio:'Detoxificante, elimina impurezas y exceso de grasa',             piel:'Grasa o con acne leve',                   pct:'0.5%'},
+  {nombre:'Aceite esencial de arbol de te',tipo:'Aceite esencial', beneficio:'Antibacteriano, para acne e imperfecciones',                    piel:'Grasa, mixta o con tendencia a acne',     pct:'0.8%'},
+  {nombre:'Aceite esencial de naranja',tipo:'Aceite esencial',     beneficio:'Revitaliza, mejora la apariencia de piel opaca',                piel:'Todo tipo (cuidado con sensibles)',        pct:'0.8%'},
+  {nombre:'Arcilla verde',         tipo:'Polvo (arcilla, carbon)', beneficio:'Limpia profundamente, regula el exceso de grasa',                piel:'Grasa o con acne',                        pct:'1.5%'},
+  {nombre:'Aceite esencial de lavanda',tipo:'Aceite esencial',     beneficio:'Relajante, antiseptico y equilibrante',                         piel:'Sensible, mixta o con estres cutaneo',    pct:'0.8%'},
+  {nombre:'Te matcha en polvo',    tipo:'Planta en polvo',         beneficio:'Antioxidante potente, protege del envejecimiento prematuro',     piel:'Madura o apagada',                        pct:'0.8%'},
+  {nombre:'Arroz en polvo',        tipo:'Polvo (arcilla, carbon)', beneficio:'Suaviza, mejora ligeramente el tono, deja textura sedosa',       piel:'Sensible, mixta o con manchas',           pct:'1.5%'},
+  {nombre:'Manteca de karite',     tipo:'Grasa solida',            beneficio:'Altamente nutritiva, regenera y protege la barrera cutanea',     piel:'Seca, agrietada o sensible',              pct:'2%'},
+  {nombre:'Manteca de cacao',      tipo:'Grasa solida',            beneficio:'Hidrata en profundidad, previene resequedad, mejora elasticidad',piel:'Seca o madura',                           pct:'1.5%'},
+  {nombre:'Aceite esencial de eucalipto',tipo:'Aceite esencial',   beneficio:'Refrescante, purificante y descongestionante',                   piel:'Grasa, con acne o tendencia a irritaciones',pct:'0.8%'},
+  {nombre:'Semillas de amapola',   tipo:'Exfoliante',              beneficio:'Exfoliante suave natural',                                       piel:'Todo tipo (evitar en muy sensibles)',      pct:'0.8%'},
+  {nombre:'Aceite de jojoba',      tipo:'Aceite vegetal',          beneficio:'Regula el sebo, hidrata sin engrasar',                           piel:'Mixta, grasa o con acne',                 pct:'1.5%'},
+  {nombre:'Aceite de coco',        tipo:'Aceite vegetal',          beneficio:'Antibacteriano, nutritivo y humectante',                         piel:'Seca (evitar en pieles con acne)',         pct:'1.5%'},
+  {nombre:'Leche en polvo',        tipo:'Planta en polvo',         beneficio:'Suaviza, nutre y aporta un efecto sedoso',                       piel:'Seca, sensible o madura',                 pct:'1.5%'},
+  {nombre:'Aceite de argan',       tipo:'Aceite vegetal',          beneficio:'Antioxidante, nutritivo, suaviza y restaura',                    piel:'Seca, madura o con danos',                pct:'1.5%'},
+  {nombre:'Sal marina fina',       tipo:'Exfoliante',              beneficio:'Exfoliante mineral, purifica y mineraliza la piel',              piel:'Normal o con piel gruesa',                pct:'1.5%'},
+];
+
+let ingredientes = [];
+let filasCostos = [];
+let filasEmpaque = [];
+let recetasGuardadas = JSON.parse(localStorage.getItem('jabonera_v2_recetas') || '[]');
+let ingredientesPersonalizados = JSON.parse(localStorage.getItem('jabonera_v2_personalizados') || '[]');
+
+function todosIngredientes() { return [...INGREDIENTES_PREDEFINIDOS, ...ingredientesPersonalizados]; }
+
+function cambiarPestana(id, el) {
+  document.querySelectorAll('.panel-pestana').forEach(p => p.classList.remove('activa'));
+  document.querySelectorAll('.boton-pestana').forEach(b => b.classList.remove('activa'));
+  document.getElementById('panel-' + id).classList.add('activa');
+  if (el) el.classList.add('activa');
+}
+
+function autocompletarPorcentaje() {
+  const tipo = document.getElementById('ip-tipo').value;
+  const info = PORCENTAJES_POR_TIPO[tipo];
+  const display = document.getElementById('ip-porcentaje-display');
+  const nota = document.getElementById('ip-porcentaje-nota');
+  if (info) {
+    display.textContent = info.pct + '%';
+    nota.textContent = info.nota;
+  } else {
+    display.textContent = '2%';
+    nota.textContent = '';
+  }
+}
+
+const TIPOS_ADITIVOS = [
+  'Grasa solida','Aceite vegetal','Aceite esencial','Fragancia',
+  'Planta en polvo','Pigmento/Mica en polvo','Colorante liquido',
+  'Exfoliante','Polvo (arcilla, carbon)','Liquido espeso'
+];
+
+function obtenerBase() { return parseFloat(document.getElementById('peso-base').value) || 0; }
+function obtenerPctTotal() { return parseFloat(document.getElementById('porcentaje-total').value) || 5; }
+
+function actualizarPorcentajeMaximo() {
+  document.getElementById('porcentaje-maximo').textContent = obtenerPctTotal();
+}
+
+function agregarIngrediente(nombre, tipo, gramos) {
+  ingredientes.push({ id: generarId(), nombre, tipo, gramos });
+  renderizarIngredientes();
+  recalcular();
+}
+
+function eliminarIngrediente(id) {
+  ingredientes = ingredientes.filter(i => i.id !== id);
+  renderizarIngredientes();
+  recalcular();
+}
+
+function actualizarIngrediente(id, campo, valor) {
+  const i = ingredientes.find(x => x.id === id);
+  if (i) { i[campo] = valor; recalcular(); }
+}
+
+function renderizarIngredientes() {
+  const base = obtenerBase();
+  const el = document.getElementById('lista-ingredientes');
+
+  if (!ingredientes.length) {
+    el.innerHTML = '<div class="vacio">Sin aditivos. Usa el boton para agregar.</div>';
+    return;
+  }
+
+  el.innerHTML = ingredientes.map(ing => {
+    const g = parseFloat(ing.gramos) || 0;
+    const pct = base > 0 ? (g / base * 100) : 0;
+    let clase = 'pct-ok';
+    if (pct > 3) clase = 'pct-excedido';
+    else if (pct > 2.5) clase = 'pct-advertencia';
+    const opcionesTipo = TIPOS_ADITIVOS.map(t =>
+      `<option value="${t}" ${t === ing.tipo ? 'selected' : ''}>${t}</option>`
+    ).join('');
+    const advertencia = pct > 3 ? ' EXCEDE 3%' : '';
+    return `<div class="fila-ingrediente">
+      <input type="text" value="${escapeHtml(ing.nombre)}" placeholder="Nombre del aditivo"
+        oninput="actualizarIngrediente(${ing.id},'nombre',this.value)">
+      <select class="tipo-ingrediente" onchange="actualizarIngrediente(${ing.id},'tipo',this.value)">${opcionesTipo}</select>
+      <input type="number" step="0.1" min="0" value="${ing.gramos}" placeholder="g"
+        oninput="actualizarIngrediente(${ing.id},'gramos',this.value)">
+      <div class="porcentaje-ingrediente ${clase}">${base > 0 ? pct.toFixed(1)+'%' : '—'}${advertencia}</div>
+      <button class="boton-eliminar" onclick="eliminarIngrediente(${ing.id})" title="Eliminar">x</button>
+    </div>`;
+  }).join('');
+}
+
+function recalcular() {
+  const base = obtenerBase();
+  const pct = obtenerPctTotal();
+  const maxTotal = base > 0 ? base * pct / 100 : 0;
+  const maxPor   = base > 0 ? base * 0.03 : 0;
+  const usado     = ingredientes.reduce((s, i) => s + (parseFloat(i.gramos) || 0), 0);
+  const disponible = Math.max(0, maxTotal - usado);
+
+  actualizarPorcentajeMaximo();
+  document.getElementById('est-base').textContent      = base > 0 ? base + ' g' : '—';
+  document.getElementById('est-max-total').textContent = base > 0 ? maxTotal.toFixed(1) + ' g' : '—';
+  document.getElementById('est-max-ing').textContent   = base > 0 ? maxPor.toFixed(1) + ' g' : '—';
+  document.getElementById('est-usados').textContent    = usado.toFixed(1) + ' g';
+  document.getElementById('est-disponible').textContent= base > 0 ? disponible.toFixed(1) + ' g' : '—';
+  document.getElementById('etiqueta-usado').textContent = usado.toFixed(1) + ' g';
+  document.getElementById('etiqueta-maximo').textContent = base > 0 ? `Maximo: ${maxTotal.toFixed(1)} g (${pct}%)` : 'Maximo: — g';
+
+  const relleno = document.getElementById('relleno-barra');
+  const mensaje = document.getElementById('mensaje-barra');
+  relleno.className = 'relleno-barra';
+  mensaje.className = 'mensaje-barra';
+
+  if (!base) {
+    relleno.style.width = '0%';
+    mensaje.textContent = 'Completa los pasos para empezar a calcular';
+    return;
+  }
+  if (!usado) {
+    relleno.style.width = '0%';
+    mensaje.textContent = 'Agrega aditivos para ver el progreso';
+    return;
+  }
+
+  const proporcion = usado / maxTotal;
+  relleno.style.width = Math.min(proporcion * 100, 100) + '%';
+
+  if (proporcion >= 1) {
+    relleno.classList.add('excedido');
+    mensaje.classList.add('excedido');
+    mensaje.textContent = proporcion === 1
+      ? `Limite alcanzado — has usado exactamente ${maxTotal.toFixed(1)} g.`
+      : `Excedido en ${(usado - maxTotal).toFixed(1)} g — reduce la cantidad de aditivos.`;
+  } else if (proporcion > 0.85) {
+    relleno.classList.add('advertencia');
+    mensaje.classList.add('advertencia');
+    mensaje.textContent = `Cerca del limite — quedan ${disponible.toFixed(1)} g disponibles.`;
+  } else {
+    mensaje.classList.add('ok');
+    mensaje.textContent = `Formula correcta — quedan ${disponible.toFixed(1)} g disponibles (${((1-proporcion)*100).toFixed(0)}% libre).`;
+  }
+
+  renderizarIngredientes();
+}
+
+function limpiarFormulario() {
+  if (!confirm('Limpiar todos los aditivos y datos de la formulacion?')) return;
+  ingredientes = [];
+  document.getElementById('nombre-jabon').value = '';
+  document.getElementById('peso-base').value = '';
+  document.getElementById('tipo-base').value = '';
+  renderizarIngredientes();
+  recalcular();
+}
+
+function abrirBiblioteca() {
+  document.getElementById('modal-biblioteca').classList.add('abierto');
+  document.getElementById('buscar-biblioteca').value = '';
+  filtrarBiblioteca();
+}
+function cerrarBiblioteca() { document.getElementById('modal-biblioteca').classList.remove('abierto'); }
+
+function filtrarBiblioteca() {
+  const q = document.getElementById('buscar-biblioteca').value.toLowerCase();
+  const base = obtenerBase();
+  const filtrados = todosIngredientes().filter(i =>
+    i.nombre.toLowerCase().includes(q) ||
+    i.tipo.toLowerCase().includes(q) ||
+    i.piel.toLowerCase().includes(q) ||
+    (i.beneficio && i.beneficio.toLowerCase().includes(q))
+  );
+
+  const contenedor = document.getElementById('lista-biblioteca');
+  if (!filtrados.length) {
+    contenedor.innerHTML = '<div class="vacio">No se encontraron resultados.</div>';
+    return;
+  }
+
+  contenedor.innerHTML = filtrados.map(i => {
+    const numPct = parseFloat(i.pct) || 1;
+    const gramosCalculados = base > 0 ? (base * numPct / 100).toFixed(1) : '';
+    const pista = base > 0 ? ` · Sugerido: ${gramosCalculados} g` : ' · Ingresa el peso de la base para ver gramos';
+    const esPersonalizado = ingredientesPersonalizados.some(c => c.nombre === i.nombre);
+    return `<div class="item-biblioteca" onclick="seleccionarDeBiblioteca('${escapeJs(i.nombre)}','${escapeJs(i.tipo)}','${gramosCalculados}')">
+      <div style="flex:1">
+        <div class="nombre-item">${escapeHtml(i.nombre)} ${esPersonalizado ? '<span style="font-size:.7rem;color:var(--salvia)">personalizado</span>' : ''}</div>
+        <div class="sub-item">${escapeHtml(i.piel)}${pista}</div>
+      </div>
+      <span class="pildora-pct">${i.pct}</span>
+    </div>`;
+  }).join('');
+}
+
+function seleccionarDeBiblioteca(nombre, tipo, gramos) {
+  agregarIngrediente(nombre, tipo, gramos);
+  cerrarBiblioteca();
+}
+
+function abrirPersonalizado() {
+  cerrarBiblioteca();
+  document.getElementById('modal-ingrediente-personalizado').classList.add('abierto');
+  document.getElementById('ip-nombre').value = '';
+  document.getElementById('ip-beneficio').value = '';
+  document.getElementById('ip-piel').value = '';
+  document.getElementById('ip-tipo').value = 'Planta en polvo';
+  autocompletarPorcentaje();
+}
+function cerrarPersonalizado() { document.getElementById('modal-ingrediente-personalizado').classList.remove('abierto'); }
+
+function guardarPersonalizado() {
+  const nombre = document.getElementById('ip-nombre').value.trim();
+  if (!nombre) { alert('Ingresa un nombre.'); return; }
+  const tipo = document.getElementById('ip-tipo').value;
+  const info = PORCENTAJES_POR_TIPO[tipo];
+  const pctNum = info ? info.pct : 2.0;
+  const ing = {
+    nombre,
+    tipo,
+    pct: pctNum + '%',
+    beneficio: document.getElementById('ip-beneficio').value.trim(),
+    piel: document.getElementById('ip-piel').value.trim() || 'Todo tipo'
+  };
+  ingredientesPersonalizados.push(ing);
+  localStorage.setItem('jabonera_v2_personalizados', JSON.stringify(ingredientesPersonalizados));
+  agregarFilaNatural(ing);
+  cerrarPersonalizado();
+  alert(`"${nombre}" agregado a la biblioteca.`);
+}
+
+function agregarFilaCosto() {
+  const id = generarId();
+  filasCostos.push({id, nombre:'', cantidadCompra:'', precioCompra:'', cantidadUsada:''});
+  renderizarFilasCosto();
+  recalcularCostos();
+}
+function eliminarFilaCosto(id) { filasCostos = filasCostos.filter(r => r.id !== id); renderizarFilasCosto(); recalcularCostos(); }
+function actualizarCosto(id, campo, valor) { const r = filasCostos.find(x => x.id === id); if (r) { r[campo] = valor; recalcularCostos(); } }
+
+function renderizarFilasCosto() {
+  const el = document.getElementById('filas-costos');
+  if (!filasCostos.length) { el.innerHTML = '<div class="vacio">Agrega los insumos que usas en tu produccion.</div>'; return; }
+  el.innerHTML = filasCostos.map(r => `<div class="fila-costo">
+    <input type="text" value="${escapeHtml(r.nombre)}" placeholder="Nombre del insumo" oninput="actualizarCosto(${r.id},'nombre',this.value)">
+    <input type="number" value="${r.cantidadCompra}" placeholder="g o ml" min="0" oninput="actualizarCosto(${r.id},'cantidadCompra',this.value)">
+    <input type="number" value="${r.precioCompra}" placeholder="$" min="0" oninput="actualizarCosto(${r.id},'precioCompra',this.value)">
+    <input type="number" value="${r.cantidadUsada}" placeholder="g usados" min="0" oninput="actualizarCosto(${r.id},'cantidadUsada',this.value)">
+    <button class="boton-eliminar" onclick="eliminarFilaCosto(${r.id})">x</button>
+  </div>`).join('');
+}
+
+function agregarFilaEmpaque() {
+  const id = generarId();
+  filasEmpaque.push({id, nombre:'', costoPor:''});
+  renderizarFilasEmpaque();
+  recalcularCostos();
+}
+function eliminarFilaEmpaque(id) { filasEmpaque = filasEmpaque.filter(r => r.id !== id); renderizarFilasEmpaque(); recalcularCostos(); }
+function actualizarEmpaque(id, campo, valor) { const r = filasEmpaque.find(x => x.id === id); if (r) { r[campo] = valor; recalcularCostos(); } }
+
+function renderizarFilasEmpaque() {
+  const el = document.getElementById('filas-empaque');
+  if (!filasEmpaque.length) { el.innerHTML = '<div class="vacio">Agrega items de empaque u otros costos por unidad.</div>'; return; }
+  el.innerHTML = filasEmpaque.map(r => `<div class="fila-empaque">
+    <input type="text" value="${escapeHtml(r.nombre)}" placeholder="Ej: Caja, etiqueta, cinta..." oninput="actualizarEmpaque(${r.id},'nombre',this.value)">
+    <input type="number" value="${r.costoPor}" placeholder="$ por unidad" min="0" oninput="actualizarEmpaque(${r.id},'costoPor',this.value)">
+    <button class="boton-eliminar" onclick="eliminarFilaEmpaque(${r.id})">x</button>
+  </div>`).join('');
+}
+
+function recalcularCostos() {
+  const unidades = parseFloat(document.getElementById('c-unidades').value) || 0;
+  const horas    = parseFloat(document.getElementById('c-horas').value) || 0;
+  const tarifa   = parseFloat(document.getElementById('c-tarifa').value) || 0;
+  const utilidad = parseFloat(document.getElementById('c-utilidad').value) || 30;
+  const impuesto = parseFloat(document.getElementById('c-impuesto').value) || 0;
+
+  const costoIng = filasCostos.reduce((s, r) => {
+    const cq = parseFloat(r.cantidadCompra) || 0;
+    const pp = parseFloat(r.precioCompra) || 0;
+    const cu = parseFloat(r.cantidadUsada) || 0;
+    return s + (cq > 0 ? pp / cq * cu : 0);
+  }, 0);
+
+  const manoObra    = horas * tarifa;
+  const empaqueUnit = filasEmpaque.reduce((s, r) => s + (parseFloat(r.costoPor) || 0), 0);
+  const empaqueTotal = empaqueUnit * (unidades || 1);
+  const totalLote   = costoIng + manoObra + empaqueTotal;
+  const costoUn     = unidades > 0 ? totalLote / unidades : 0;
+  const precioSug   = costoUn * (1 + utilidad / 100);
+  const precioFinal = precioSug * (1 + impuesto / 100);
+  const ganancia    = precioSug - costoUn;
+
+  const fmt = v => '$' + Math.round(v).toLocaleString('es-CO');
+  document.getElementById('precio-lote').textContent     = fmt(totalLote);
+  document.getElementById('precio-unidad').textContent   = fmt(costoUn);
+  document.getElementById('precio-sugerido').textContent = fmt(precioSug);
+  document.getElementById('precio-final').textContent    = fmt(precioFinal);
+  document.getElementById('precio-ganancia').textContent = fmt(ganancia);
+}
+
+function guardarReceta() {
+  const nombre = document.getElementById('nombre-jabon').value.trim();
+  if (!nombre) { alert('Ingresa un nombre para el jabon antes de guardar.'); return; }
+  const receta = {
+    id: Date.now(),
+    nombre,
+    tipoBase: document.getElementById('tipo-base').value.trim() || 'No especificado',
+    base: obtenerBase(),
+    pctTotal: obtenerPctTotal(),
+    ingredientes: JSON.parse(JSON.stringify(ingredientes)),
+    fecha: new Date().toLocaleDateString('es-CO', {day:'2-digit', month:'short', year:'numeric'})
+  };
+  recetasGuardadas.unshift(receta);
+  localStorage.setItem('jabonera_v2_recetas', JSON.stringify(recetasGuardadas));
+  renderizarListaRecetas();
+  cambiarPestana('recetas', document.querySelectorAll('.boton-pestana')[3]);
+}
+
+function renderizarListaRecetas() {
+  const el = document.getElementById('contenedor-lista-recetas');
+  if (!recetasGuardadas.length) {
+    el.innerHTML = '<div class="vacio">No tienes recetas guardadas. Ve a Formulacion, crea tu jabon y guardalo aqui.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="lista-recetas">' +
+    recetasGuardadas.map(r => `
+      <div class="chip-receta" onclick="previsualizarReceta(${r.id})">
+        <div>
+          <div class="nombre-receta">${escapeHtml(r.nombre)}</div>
+          <div class="fecha-receta">${r.fecha} · ${r.base}g</div>
+        </div>
+        <div class="acciones-chip">
+          <button onclick="event.stopPropagation();exportarRecetaIndividual(${r.id})">Exportar</button>
+          <span class="borrar-chip" onclick="event.stopPropagation();eliminarReceta(${r.id})">x</span>
+        </div>
+      </div>`
+    ).join('') + '</div>';
+}
+
+function exportarRecetaIndividual(id) {
+  const r = recetasGuardadas.find(x => x.id === id);
+  if (!r) return;
+  const blob = new Blob([JSON.stringify(r, null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `receta-${r.nombre.replace(/\s+/g,'-')}-${r.id}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importarReceta(event) {
+  const archivo = event.target.files[0];
+  if (!archivo) return;
+  const lector = new FileReader();
+  lector.onload = function(e) {
+    try {
+      const importado = JSON.parse(e.target.result);
+      let lista = Array.isArray(importado) ? importado : (importado.id && importado.nombre ? [importado] : null);
+      if (!lista) throw new Error('Formato invalido');
+
+      let agregadas = 0;
+      const nombresConocidos = new Set(todosIngredientes().map(x => x.nombre.toLowerCase()));
+
+      lista.forEach(r => {
+        if (!r.id || !r.nombre) return;
+        if (!recetasGuardadas.some(x => x.id === r.id)) {
+          recetasGuardadas.push(r);
+          agregadas++;
+        }
+        if (r.ingredientes && Array.isArray(r.ingredientes)) {
+          r.ingredientes.forEach(ing => {
+            if (ing.nombre && !nombresConocidos.has(ing.nombre.toLowerCase())) {
+              const info = PORCENTAJES_POR_TIPO[ing.tipo] || { pct: 2.0 };
+              const nuevo = {
+                nombre: ing.nombre,
+                tipo: ing.tipo || 'Planta en polvo',
+                pct: info.pct + '%',
+                beneficio: '',
+                piel: 'Todo tipo'
+              };
+              ingredientesPersonalizados.push(nuevo);
+              nombresConocidos.add(ing.nombre.toLowerCase());
+            }
+          });
+        }
+      });
+
+      localStorage.setItem('jabonera_v2_recetas', JSON.stringify(recetasGuardadas));
+      localStorage.setItem('jabonera_v2_personalizados', JSON.stringify(ingredientesPersonalizados));
+      construirTablaNatural();
+      renderizarListaRecetas();
+      alert(agregadas > 0 ? `${agregadas} receta(s) importada(s) correctamente.` : 'No se encontraron recetas nuevas (pueden ya existir en tu lista).');
+    } catch(err) {
+      alert('Error al leer el archivo. Asegurate de que sea un JSON exportado por esta calculadora.');
+    }
+    event.target.value = '';
+  };
+  lector.readAsText(archivo);
+}
+
+function previsualizarReceta(id) {
+  const r = recetasGuardadas.find(x => x.id === id);
+  if (!r) return;
+  const usado    = r.ingredientes.reduce((s, i) => s + (parseFloat(i.gramos) || 0), 0);
+  const maxTotal = r.base * r.pctTotal / 100;
+  const pctUsado = maxTotal > 0 ? (usado / maxTotal * 100).toFixed(0) : 0;
+
+  document.getElementById('contenedor-vista-previa').innerHTML = `<div class="vista-previa">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:14px">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:var(--salvia-oscuro);font-weight:700">${escapeHtml(r.nombre)}</div>
+        <div style="font-size:.8rem;color:var(--texto-suave);margin-top:3px">${escapeHtml(r.tipoBase)} · ${r.base} g · ${r.pctTotal}% aditivos · ${r.fecha}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="boton boton-secundario boton-pequeno" onclick="cargarReceta(${r.id})">Cargar en formulacion</button>
+        <button class="boton boton-secundario boton-pequeno" onclick="exportarRecetaIndividual(${r.id})">Exportar JSON</button>
+      </div>
+    </div>
+    ${r.ingredientes.length ? `
+    <div style="overflow-x:auto">
+      <table class="tabla">
+        <thead><tr><th>Aditivo</th><th>Tipo</th><th>Cantidad</th><th>% base</th></tr></thead>
+        <tbody>${r.ingredientes.map(i => {
+          const g = parseFloat(i.gramos) || 0;
+          const p = r.base > 0 ? (g / r.base * 100).toFixed(1) : '—';
+          return `<tr><td>${escapeHtml(i.nombre||'—')}</td><td>${escapeHtml(i.tipo)}</td><td>${g} g</td><td>${p}%</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px;font-size:.82rem;color:var(--texto-suave)">
+      Total aditivos: <strong>${usado.toFixed(1)} g</strong> de ${maxTotal.toFixed(1)} g maximos (${pctUsado}% del limite)
+    </div>` : '<div class="vacio">Esta receta no tiene aditivos registrados.</div>'}
+  </div>`;
+  document.getElementById('contenedor-vista-previa').scrollIntoView({behavior:'smooth'});
+}
+
+function cargarReceta(id) {
+  const r = recetasGuardadas.find(x => x.id === id);
+  if (!r) return;
+  document.getElementById('nombre-jabon').value = r.nombre;
+  document.getElementById('peso-base').value    = r.base;
+  document.getElementById('porcentaje-total').value = r.pctTotal;
+  document.getElementById('tipo-base').value    = r.tipoBase;
+  ingredientes = r.ingredientes.map(i => ({...i, id: generarId()}));
+
+  const nombresConocidos = new Set(todosIngredientes().map(x => x.nombre.toLowerCase()));
+  let huboNuevos = false;
+  r.ingredientes.forEach(ing => {
+    if (ing.nombre && !nombresConocidos.has(ing.nombre.toLowerCase())) {
+      const info = PORCENTAJES_POR_TIPO[ing.tipo] || { pct: 2.0 };
+      ingredientesPersonalizados.push({
+        nombre: ing.nombre,
+        tipo: ing.tipo || 'Planta en polvo',
+        pct: info.pct + '%',
+        beneficio: '',
+        piel: 'Todo tipo'
+      });
+      nombresConocidos.add(ing.nombre.toLowerCase());
+      huboNuevos = true;
+    }
+  });
+  if (huboNuevos) {
+    localStorage.setItem('jabonera_v2_personalizados', JSON.stringify(ingredientesPersonalizados));
+    construirTablaNatural();
+  }
+
+  renderizarIngredientes();
+  recalcular();
+  cambiarPestana('formulacion', document.querySelectorAll('.boton-pestana')[0]);
+}
+
+function eliminarReceta(id) {
+  if (!confirm('Eliminar esta receta? Esta accion no se puede deshacer.')) return;
+  recetasGuardadas = recetasGuardadas.filter(r => r.id !== id);
+  localStorage.setItem('jabonera_v2_recetas', JSON.stringify(recetasGuardadas));
+  renderizarListaRecetas();
+  document.getElementById('contenedor-vista-previa').innerHTML = '';
+}
+
+function construirTablaNatural() {
+  const tbody = document.getElementById('cuerpo-tabla-natural');
+  tbody.innerHTML = '';
+  todosIngredientes().forEach(i => agregarFilaNatural(i, tbody));
+}
+function agregarFilaNatural(ing, tbody) {
+  const el = tbody || document.getElementById('cuerpo-tabla-natural');
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td><strong>${escapeHtml(ing.nombre)}</strong></td><td>${escapeHtml(ing.beneficio||'—')}</td><td>${escapeHtml(ing.piel||'—')}</td><td>${escapeHtml(ing.pct)}</td>`;
+  el.appendChild(tr);
+}
+
+let _uid = 1;
+function generarId() { return ++_uid + Date.now(); }
+function escapeHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escapeJs(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+function crearBurbujas() {
+  const canvas = document.getElementById('lienzo-burbujas');
+  if (!canvas) return;
+  const tamanos = [14,18,22,28,34,40,50,60];
+  for (let i = 0; i < 22; i++) {
+    const b = document.createElement('div');
+    b.className = 'burbuja';
+    const size = tamanos[Math.floor(Math.random() * tamanos.length)];
+    b.style.cssText = `width:${size}px;height:${size}px;left:${Math.random()*96}%;bottom:${20+Math.random()*120}px;animation-delay:${Math.random()*7}s;animation-duration:${5+Math.random()*6}s`;
+    canvas.appendChild(b);
+  }
+}
+
+let _iniciado = false;
+function iniciar() {
+  if (_iniciado) return;
+  _iniciado = true;
+
+  crearBurbujas();
+  construirTablaNatural();
+  renderizarIngredientes();
+  renderizarFilasCosto();
+  renderizarFilasEmpaque();
+  renderizarListaRecetas();
+  recalcular();
+  recalcularCostos();
+  autocompletarPorcentaje();
+}
+
+iniciar();
+</script>
+</body>
+</html>
