@@ -413,7 +413,7 @@ footer { text-align: center; padding: 20px; font-size: .78rem; color: var(--text
     <div class="fila-botones">
       <button class="boton boton-primario" onclick="guardarReceta()">Guardar receta</button>
       <button class="boton boton-secundario" onclick="limpiarFormulario()">Limpiar formulacion</button>
-      <button class="boton boton-secundario" onclick="window.print()">Imprimir formula</button>
+      <button class="boton boton-secundario" onclick="descargarFormula()">Descargar formula</button>
     </div>
   </div>
 
@@ -952,9 +952,21 @@ function recalcularCostos() {
   document.getElementById('precio-ganancia').textContent = fmt(ganancia);
 }
 
+function recetaExisteConNombre(nombre) {
+  return recetasGuardadas.some(r => r.nombre.toLowerCase() === nombre.toLowerCase());
+}
+
 function guardarReceta() {
   const nombre = document.getElementById('nombre-jabon').value.trim();
   if (!nombre) { alert('Ingresa un nombre para el jabon antes de guardar.'); return; }
+  
+  if (recetaExisteConNombre(nombre)) {
+    if (!confirm(`Ya existe una receta con el nombre "${nombre}". ¿Deseas sobrescribirla?`)) {
+      return;
+    }
+    recetasGuardadas = recetasGuardadas.filter(r => r.nombre.toLowerCase() !== nombre.toLowerCase());
+  }
+  
   const receta = {
     id: Date.now(),
     nombre,
@@ -1018,10 +1030,14 @@ function importarReceta(event) {
 
       lista.forEach(r => {
         if (!r.id || !r.nombre) return;
-        if (!recetasGuardadas.some(x => x.id === r.id)) {
-          recetasGuardadas.push(r);
-          agregadas++;
+        if (recetasGuardadas.some(x => x.nombre.toLowerCase() === r.nombre.toLowerCase())) {
+          if (!confirm(`Ya existe una receta con el nombre "${r.nombre}". ¿Deseas sobrescribirla?`)) {
+            return;
+          }
+          recetasGuardadas = recetasGuardadas.filter(x => x.nombre.toLowerCase() !== r.nombre.toLowerCase());
         }
+        recetasGuardadas.push(r);
+        agregadas++;
         if (r.ingredientes && Array.isArray(r.ingredientes)) {
           r.ingredientes.forEach(ing => {
             if (ing.nombre && !nombresConocidos.has(ing.nombre.toLowerCase())) {
@@ -1051,6 +1067,43 @@ function importarReceta(event) {
     event.target.value = '';
   };
   lector.readAsText(archivo);
+}
+
+function descargarFormula() {
+  const nombre = document.getElementById('nombre-jabon').value.trim() || 'formula';
+  const base = obtenerBase();
+  const pct = obtenerPctTotal();
+  const usado = ingredientes.reduce((s, i) => s + (parseFloat(i.gramos) || 0), 0);
+  const maxTotal = base > 0 ? base * pct / 100 : 0;
+  
+  let texto = `FORMULA DE JABON\n`;
+  texto += `=================\n\n`;
+  texto += `Nombre: ${nombre}\n`;
+  texto += `Tipo de base: ${document.getElementById('tipo-base').value.trim() || 'No especificado'}\n`;
+  texto += `Peso de base: ${base} g\n`;
+  texto += `Porcentaje total de aditivos: ${pct}%\n`;
+  texto += `Maximo de aditivos: ${maxTotal.toFixed(1)} g\n`;
+  texto += `Aditivos usados: ${usado.toFixed(1)} g\n\n`;
+  texto += `ADITIVOS:\n`;
+  texto += `---------\n`;
+  if (ingredientes.length === 0) {
+    texto += `(Sin aditivos)\n`;
+  } else {
+    ingredientes.forEach(ing => {
+      const g = parseFloat(ing.gramos) || 0;
+      const p = base > 0 ? (g / base * 100).toFixed(1) : '0';
+      texto += `${ing.nombre || 'Sin nombre'} (${ing.tipo}): ${g} g (${p}%)\n`;
+    });
+  }
+  texto += `\n--- Fin de la formula ---\n`;
+  
+  const blob = new Blob([texto], {type: 'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `formula-${nombre.replace(/\s+/g,'-')}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function previsualizarReceta(id) {
