@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Calculadora Jabonera</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
 :root {
   --crema: #FAF6EE;
@@ -413,7 +414,7 @@ footer { text-align: center; padding: 20px; font-size: .78rem; color: var(--text
     <div class="fila-botones">
       <button class="boton boton-primario" onclick="guardarReceta()">Guardar receta</button>
       <button class="boton boton-secundario" onclick="limpiarFormulario()">Limpiar formulacion</button>
-      <button class="boton boton-secundario" onclick="descargarFormula()">Descargar formula</button>
+      <button class="boton boton-secundario" onclick="descargarPDF()">Descargar formula (PDF)</button>
     </div>
   </div>
 
@@ -1069,41 +1070,111 @@ function importarReceta(event) {
   lector.readAsText(archivo);
 }
 
-function descargarFormula() {
-  const nombre = document.getElementById('nombre-jabon').value.trim() || 'formula';
+function generarHTMLPDF() {
+  const nombre = document.getElementById('nombre-jabon').value.trim() || 'Sin nombre';
   const base = obtenerBase();
   const pct = obtenerPctTotal();
   const usado = ingredientes.reduce((s, i) => s + (parseFloat(i.gramos) || 0), 0);
   const maxTotal = base > 0 ? base * pct / 100 : 0;
-  
-  let texto = `FORMULA DE JABON\n`;
-  texto += `=================\n\n`;
-  texto += `Nombre: ${nombre}\n`;
-  texto += `Tipo de base: ${document.getElementById('tipo-base').value.trim() || 'No especificado'}\n`;
-  texto += `Peso de base: ${base} g\n`;
-  texto += `Porcentaje total de aditivos: ${pct}%\n`;
-  texto += `Maximo de aditivos: ${maxTotal.toFixed(1)} g\n`;
-  texto += `Aditivos usados: ${usado.toFixed(1)} g\n\n`;
-  texto += `ADITIVOS:\n`;
-  texto += `---------\n`;
+  const tipoBase = document.getElementById('tipo-base').value.trim() || 'No especificado';
+  const disponible = Math.max(0, maxTotal - usado);
+  const proporcion = maxTotal > 0 ? (usado / maxTotal * 100) : 0;
+
+  let filas = '';
   if (ingredientes.length === 0) {
-    texto += `(Sin aditivos)\n`;
+    filas = `<tr><td colspan="4" style="text-align:center;color:#7A6A55;font-style:italic;">Sin aditivos registrados</td></tr>`;
   } else {
     ingredientes.forEach(ing => {
       const g = parseFloat(ing.gramos) || 0;
       const p = base > 0 ? (g / base * 100).toFixed(1) : '0';
-      texto += `${ing.nombre || 'Sin nombre'} (${ing.tipo}): ${g} g (${p}%)\n`;
+      filas += `<tr><td>${escapeHtml(ing.nombre || 'Sin nombre')}</td><td>${escapeHtml(ing.tipo)}</td><td>${g.toFixed(1)} g</td><td>${p}%</td></tr>`;
     });
   }
-  texto += `\n--- Fin de la formula ---\n`;
+
+  return `
+    <div style="font-family:'DM Sans',sans-serif;max-width:700px;margin:0 auto;padding:40px 30px;background:#FAF6EE;border-radius:12px;">
+      <div style="text-align:center;border-bottom:2px solid #4A7258;padding-bottom:20px;margin-bottom:25px;">
+        <div style="font-family:'Playfair Display',serif;font-size:28px;color:#4A7258;font-weight:700;letter-spacing:-0.5px;">Calculadora Jabonera</div>
+        <div style="font-size:14px;color:#7A6A55;margin-top:4px;">Formula de jabon artesanal</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:25px;">
+        <div style="background:#FFFFFF;padding:12px 16px;border-radius:8px;border:1px solid #D8CCBB;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#7A6A55;font-weight:600;">Nombre</div>
+          <div style="font-size:16px;font-weight:600;color:#2D2416;">${escapeHtml(nombre)}</div>
+        </div>
+        <div style="background:#FFFFFF;padding:12px 16px;border-radius:8px;border:1px solid #D8CCBB;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#7A6A55;font-weight:600;">Tipo de base</div>
+          <div style="font-size:16px;font-weight:600;color:#2D2416;">${escapeHtml(tipoBase)}</div>
+        </div>
+        <div style="background:#FFFFFF;padding:12px 16px;border-radius:8px;border:1px solid #D8CCBB;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#7A6A55;font-weight:600;">Peso de base</div>
+          <div style="font-size:16px;font-weight:600;color:#2D2416;">${base} g</div>
+        </div>
+        <div style="background:#FFFFFF;padding:12px 16px;border-radius:8px;border:1px solid #D8CCBB;">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#7A6A55;font-weight:600;">Porcentaje total</div>
+          <div style="font-size:16px;font-weight:600;color:#2D2416;">${pct}%</div>
+        </div>
+      </div>
+
+      <div style="background:#4A7258;color:#FFFFFF;border-radius:8px;padding:12px 20px;display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin-bottom:25px;">
+        <div><div style="font-size:11px;opacity:0.7;">Usado</div><div style="font-size:18px;font-weight:700;">${usado.toFixed(1)} g</div></div>
+        <div><div style="font-size:11px;opacity:0.7;">Maximo</div><div style="font-size:18px;font-weight:700;">${maxTotal.toFixed(1)} g</div></div>
+        <div><div style="font-size:11px;opacity:0.7;">Disponible</div><div style="font-size:18px;font-weight:700;">${disponible.toFixed(1)} g</div></div>
+      </div>
+
+      <div style="background:#FFFFFF;border-radius:8px;border:1px solid #D8CCBB;overflow:hidden;">
+        <div style="background:#4A7258;color:#FFFFFF;padding:10px 16px;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Aditivos</div>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;">
+          <thead>
+            <tr style="background:#F5F0E8;border-bottom:1px solid #D8CCBB;">
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:#4A7258;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;">Ingrediente</th>
+              <th style="padding:10px 14px;text-align:left;font-weight:600;color:#4A7258;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;">Tipo</th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:#4A7258;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;">Cantidad</th>
+              <th style="padding:10px 14px;text-align:right;font-weight:600;color:#4A7258;font-size:12px;text-transform:uppercase;letter-spacing:0.3px;">% base</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${filas}
+          </tbody>
+        </table>
+      </div>
+
+      <div style="text-align:center;font-size:11px;color:#7A6A55;margin-top:25px;padding-top:15px;border-top:1px solid #D8CCBB;">
+        Generado con Calculadora Jabonera · ${new Date().toLocaleDateString('es-CO', {day:'2-digit',month:'long',year:'numeric'})}
+      </div>
+    </div>
+  `;
+}
+
+function descargarPDF() {
+  const nombre = document.getElementById('nombre-jabon').value.trim() || 'formula';
+  const contenido = generarHTMLPDF();
   
-  const blob = new Blob([texto], {type: 'text/plain'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `formula-${nombre.replace(/\s+/g,'-')}.txt`;
-  a.click();
-  URL.revokeObjectURL(url);
+  const contenedor = document.createElement('div');
+  contenedor.innerHTML = contenido;
+  contenedor.style.position = 'fixed';
+  contenedor.style.left = '-9999px';
+  contenedor.style.top = '0';
+  contenedor.style.width = '700px';
+  contenedor.style.background = '#FAF6EE';
+  contenedor.style.padding = '20px';
+  document.body.appendChild(contenedor);
+
+  const opt = {
+    margin: [0.5, 0.5, 0.5, 0.5],
+    filename: `formula-${nombre.replace(/\s+/g,'-')}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  };
+
+  html2pdf().set(opt).from(contenedor).save().then(function() {
+    document.body.removeChild(contenedor);
+  }).catch(function(err) {
+    document.body.removeChild(contenedor);
+    alert('Error al generar el PDF: ' + err.message);
+  });
 }
 
 function previsualizarReceta(id) {
